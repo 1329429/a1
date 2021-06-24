@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta
+        name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>1boon</title>
+    <link
+        rel="stylesheet"
+        href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+    />
+    <style>
+        .list {
+            margin: 10px;
+            padding: 10px;
+        }
+        h4 {
+            font-size:18px;
+            font-weight:bold;
+        }
+        .fa-spin-custom, .glyphicon-spin {
+            -webkit-animation: spin 1000ms infinite linear;
+            animation: spin 1000ms infinite linear;
+        }
+        @-webkit-keyframes spin {
+            0% {
+                -webkit-transform: rotate(0deg);
+                transform: rotate(0deg);
+            }
+            100% {
+                -webkit-transform: rotate(359deg);
+                transform: rotate(359deg);
+            }
+        }
+        @keyframes spin {
+            0% {
+                -webkit-transform: rotate(0deg);
+                transform: rotate(0deg);
+            }
+            100% {
+                -webkit-transform: rotate(359deg);
+                transform: rotate(359deg);
+            }
+        }
+        .d-none {
+            display: none;
+        }
+        .mb-30 {
+            margin-bottom: 30px;
+        }
+        .table td img {
+            width: 110px;
+            height: 80px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>1boon 콘텐츠</h1>
+
+    <div>
+        <ul class="nav nav-tabs">
+            <!-- 선택된탭:선택된 탭에 .active    -->
+            <li data-type="recent" class="active"><a href="#">최근</a></li>
+            <li data-type="popular"><a href="#">많이본</a></li>
+            <li data-type="view"><a href="#">실시간인기</a></li>
+        </ul>
+    </div>
+
+    <div id="list">
+        여기서 각 리스트 뿌려주기 <br /><br />
+        <!-- 제목, 링크, 이미지, CP 를 표시해주세요  -->
+        <div class="col-12">
+            <table class="table">
+                <colgroup>
+
+                </colgroup>
+                <thead>
+                <tr>
+                    <th scope="col">Image</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">CP</th>
+                </tr>
+                </thead>
+                <tbody class="tbody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 로딩마크업: 로딩중일때만 표시 -->
+        <div class="text-center spinner d-none">
+            <span class="glyphicon glyphicon-refresh glyphicon-spin"></span> 로딩중
+        </div>
+    </div>
+
+    <div class="text-center mb-30">
+        <button type="button" class="btn btn-default btn-more">더보기</button>
+    </div>
+</div>
+<script>
+    (function() {
+        var httpRequest;        // httpRequest Object
+        var result;             // json list Object
+        var currentPage = 0;    // page number
+        var blockSize = 10;     // 10 items per page
+
+        function ready(callbackFunc) {
+            if (document.readyState !== 'loading') {
+                // Document is already ready, call the callback directly
+                callbackFunc();
+            } else if (document.addEventListener) {
+                // All modern browsers to register DOMContentLoaded
+                document.addEventListener('DOMContentLoaded', callbackFunc);
+            } else {
+                // Old IE browsers
+                document.attachEvent('onreadystatechange', function () {
+                    if (document.readyState === 'complete') {
+                        callbackFunc();
+                    }
+                });
+            }
+        };
+
+        // set activate tab
+        var activeTab = function() {
+            const tabs = document.querySelectorAll('ul.nav-tabs > li');
+            for (const tab of tabs) {
+                tab.classList.remove('active');
+            }
+            this.classList.add('active');
+
+            resetVariables();
+
+            processList();
+        };
+
+        var resetVariables = function() {
+            httpRequest = null;
+            result = null;
+            currentPage = 0;
+            document.querySelector('tbody.tbody').innerHTML = "";
+        };
+
+        var getList = function() {
+            const type = document.querySelector('ul.nav-tabs li.active').getAttribute('data-type');
+
+            // at first time with ajax
+            if(!httpRequest) {
+                httpRequest = new XMLHttpRequest();
+
+                if(!httpRequest) {
+                    alert('Request failed.');
+                    return false;
+                }
+
+                httpRequest.onreadystatechange = resultProcess;
+                httpRequest.open('GET', 'https://raw.githubusercontent.com/1329429/5465/main/'+ type +'.json');
+                httpRequest.send();
+            } else {
+                // after first time with js Object
+                drawTable();
+            }
+        };
+
+        // ajax success process
+        var resultProcess = function() {
+            if (httpRequest.readyState === XMLHttpRequest.DONE) {
+                if (httpRequest.status === 200) {
+                    result = JSON.parse(httpRequest.responseText);
+                    drawTable();
+                } else {
+                    alert('Internal server error occurred.');
+                }
+            }
+        };
+
+        // scroll move bottom
+        var setScrollBottom = function() {
+            var location = document.querySelector("button.btn-more").offsetTop;
+            window.scrollTo({top:location, behavior:'smooth'});
+        };
+
+        // sleep via Promise
+        function sleep(ms) {
+            return new Promise((r) => setTimeout(r, ms))
+        }
+
+        // draw table
+        var drawTable = function() {
+            if(result) {
+                var tbody = document.querySelector('tbody.tbody');
+
+                // calculate pagination
+                var i = currentPage * blockSize;
+                var len = (parseInt(currentPage) + 1) * blockSize;
+
+                if(len > result.length) {
+                    alert('더 이상 데이터가 없습니다.');
+                    return;
+                }
+
+                for(i; i<len; i++) {
+                    var item = result[i];
+                    var title = item.title;
+                    var img = item.img;
+                    var url = item.url;
+                    var cp = item.cp;
+
+                    var htmlTD = "<td><a href='" + url + "' target='_blank'><img src='" + img + "'></a></td>";
+                    htmlTD += "<td><a href='" + url + "' target='_blank'>" + title + "</a></td>";
+                    htmlTD += "<td>" + cp + "</td>";
+
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = htmlTD;
+                    tbody.appendChild(tr);
+                }
+                currentPage = parseInt(currentPage) + 1;
+            }
+        };
+
+        // loading spinner
+        var spinnerDisplay = function(display) {
+            if(display) {
+                document.querySelector('.spinner').classList.remove('d-none');
+            } else {
+                document.querySelector('.spinner').classList.add('d-none');
+            }
+        };
+
+        /*
+        *   list process
+        *       1. show spinner
+        *       2. sleep 1 second (1,000 ms)
+        *       3. get json list
+        *       4. scroll move
+        *       5. hide spinner
+        * */
+        var processList = function() {
+            spinnerDisplay(true);
+
+            sleep(1000)
+                .then(() => getList())
+                .then(() => setScrollBottom())
+                .then(() => spinnerDisplay(false));
+        };
+
+        ready(function() {
+            // tab click
+            const tabs = document.querySelectorAll('ul.nav-tabs li');
+            for (const tab of tabs) {
+                tab.addEventListener('click', activeTab);
+            }
+
+            // button more click
+            const btnMore = document.querySelector('button.btn-more');
+            btnMore.addEventListener('click', processList);
+
+            // draw list at first time
+            processList();
+        });
+    })();
+</script>
+</body>
+</html>
+© 2021 GitHub, Inc.
